@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project (dap_server_http_db_auth)
+project (dap_server_http_db)
 
 # fix implicit declaration warnings
 add_definitions ("-D_GNU_SOURCE")
@@ -26,23 +26,16 @@ endif()
 
 
 
-file(GLOB FILE_SOURCES *.c)
-file(GLOB FILE_HEADERS *.h)
+file(GLOB DAP_SERVER_HTTP_DB_SOURCES src/*.c)
+file(GLOB DAP_SERVER_HTTP_DB_HEADERS include/*.h)
 
-set(SOURCES db_core.c  db_http.c  db_http_file.c)
+add_library(${PROJECT_NAME} STATIC ${DAP_SERVER_HTTP_DB_SOURCES} ${DAP_SERVER_HTTP_DB_HEADERS} )
 
-add_library(${PROJECT_NAME} STATIC ${DB_SRCS})
-
-
-
-add_library(${PROJECT_NAME} STATIC ${SOURCES} ${HEADERS} )
+target_include_directories(${PROJECT_NAME} PUBLIC include)
+target_include_directories(${PROJECT_NAME} PRIVATE src)
 
 target_link_libraries(${PROJECT_NAME} dap_core dap_crypto dap_http_server dap_enc_server
     ${BSON_LIBRARIES} ${MONGO_LIBRARIES})
 target_include_directories(${PROJECT_NAME} INTERFACE .
     PUBLIC ${BSON_INCLUDE_DIRS} ${MONGO_INCLUDE_DIRS}
     )
-
-
-#set(${PROJECT_NAME}_DEFINITIONS CACHE INTERNAL "${PROJECT_NAME}: Definitions" FORCE)
-#set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_SOURCE_DIR} CACHE INTERNAL "${PROJECT_NAME}: Include Directories" FORCE)

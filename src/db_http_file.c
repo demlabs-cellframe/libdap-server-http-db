@@ -38,17 +38,17 @@ void db_http_file_headers_write(dap_http_client_t * cl_ht, void * arg);
 void db_http_file_data_read(dap_http_client_t * cl_ht, void * arg);
 void db_http_file_data_write(dap_http_client_t * cl_ht, void * arg);
 
-static const char *_contents_path;
+static char *s_contents_path;
 
 int db_http_file_init(const char* content_path)
 {
-    _contents_path = strdup(content_path);
+    s_contents_path = strdup(content_path);
     return 0;
 }
 
 void db_http_file_deinit()
 {
-    free((char*)_contents_path);
+    free((char*)s_contents_path);
 }
 
 void db_http_file_proc_add(struct dap_http *sh, const char * url_path)
@@ -84,7 +84,7 @@ void db_http_file_headers_write(dap_http_client_t * cl_ht, void * arg)
 
     dap_enc_key_t * key= dap_enc_ks_find_http(cl_ht);
     if(key){
-        uint8_t buf[sizeof(cl_ht->url_path)];
+        char buf[sizeof(cl_ht->url_path)];
         size_t buf_size=0;
         size_t url_path_size=strlen(cl_ht->url_path);
 
@@ -131,17 +131,18 @@ void db_http_file_headers_write(dap_http_client_t * cl_ht, void * arg)
                                 cl_ht_file->key=key;
 
 
-                                snprintf(cl_ht_file->path,sizeof(cl_ht_file->path),"%s/%s", _contents_path, file_path );
+                                snprintf(cl_ht_file->path,sizeof(cl_ht_file->path),"%s/%s", s_contents_path, file_path );
 
                                 log_it(L_DEBUG, "Check %s file", cl_ht_file->path);
 
-                                struct stat file_stat;
-                                if(stat(cl_ht_file->path,&file_stat)==0){
-                                    cl_ht->out_last_modified=file_stat.st_mtime;
-                                    cl_ht->out_content_length=(file_stat.st_size%AES_BLOCK_SIZE )?
-                                                (file_stat.st_size +(AES_BLOCK_SIZE- (file_stat.st_size%AES_BLOCK_SIZE) )):
-                                                file_stat.st_size;
-                                    cl_ht_file->file_size=file_stat.st_size;
+                                struct stat l_file_stat;
+                                size_t l_file_stat_size = (size_t) l_file_stat.st_size;
+                                if(stat(cl_ht_file->path,&l_file_stat)==0){
+                                    cl_ht->out_last_modified=l_file_stat.st_mtime;
+                                    cl_ht->out_content_length=(l_file_stat_size%AES_BLOCK_SIZE )?
+                                                (l_file_stat.st_size +(AES_BLOCK_SIZE- (l_file_stat.st_size%AES_BLOCK_SIZE) )):
+                                                l_file_stat.st_size;
+                                    cl_ht_file->file_size=l_file_stat.st_size;
                                     cl_ht_file->fd=fopen(cl_ht_file->path,"r");
                                     if(cl_ht_file->fd == NULL){
                                         log_it(L_ERROR, "Can't open %s: %s",cl_ht_file->path,strerror(errno));
@@ -236,14 +237,19 @@ void db_http_file_data_write(dap_http_client_t * cl_ht, void * arg)
             //strncat(cl_ht->client->buf_out+cl_ht->client->buf_out_size,"\r\n",sizeof(cl_ht->client->buf_out));
             fclose(cl_ht_file->fd);
             dap_client_remote_ready_to_write(cl_ht->client,false);
-            cl_ht->client->signal_close=!cl_ht->keep_alive;
+            //cl_ht->client->signal_close=!cl_ht->keep_alive;
+            if (!cl_ht->keep_alive)
+                cl_ht->client->flags &= DAP_SOCK_SIGNAL_CLOSE;
             cl_ht->state_write=DAP_HTTP_CLIENT_STATE_NONE;
         }
     }else{
         log_it(L_INFO, "All the file %s is sent out (%lu bytes)",cl_ht_file->path,cl_ht_file->position);
         fclose(cl_ht_file->fd);
         dap_client_remote_ready_to_write(cl_ht->client,false);
-        cl_ht->client->signal_close=!cl_ht->keep_alive;
+
+        if (!cl_ht->keep_alive)
+            cl_ht->client->flags &= DAP_SOCK_SIGNAL_CLOSE;
+
         cl_ht->state_write=DAP_HTTP_CLIENT_STATE_NONE;
     }
 }

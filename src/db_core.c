@@ -20,7 +20,6 @@
 
 #include <string.h>
 #include <bson.h>
-#include <bcon.h>
 #include <mongoc.h>
 #include "dap_common.h"
 #include "db_core.h"
