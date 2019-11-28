@@ -10,4 +10,3 @@ void db_core_refresh();
 int db_input_validation(const char * str);
 
 mongoc_client_t *mongo_client, *traffick_track_db_client;
-
